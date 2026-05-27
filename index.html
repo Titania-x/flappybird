@@ -5,7 +5,7 @@
 <meta name="viewport"
 content="width=device-width,initial-scale=1.0,user-scalable=no">
 
-<title>Sky Mochi</title>
+<title>Sky Mochi Deluxe</title>
 
 <style>
 
@@ -25,6 +25,8 @@ font-family:Arial,sans-serif;
 
 canvas{
 display:block;
+width:100vw;
+height:100vh;
 }
 
 </style>
@@ -55,6 +57,46 @@ return v ? JSON.parse(v) : def;
 }catch(e){
 return def;
 }
+}
+
+/* ======================================================
+   AUDIO
+====================================================== */
+
+const audioCtx =
+new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type){
+
+const osc = audioCtx.createOscillator();
+const gain = audioCtx.createGain();
+
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+
+if(type==="jump"){
+osc.frequency.value = 320;
+}
+
+if(type==="coin"){
+osc.frequency.value = 700;
+}
+
+if(type==="dead"){
+osc.frequency.value = 120;
+}
+
+osc.type = "square";
+
+gain.gain.setValueAtTime(0.12,audioCtx.currentTime);
+gain.gain.exponentialRampToValueAtTime(
+0.001,
+audioCtx.currentTime + 0.25
+);
+
+osc.start();
+osc.stop(audioCtx.currentTime + 0.25);
+
 }
 
 /* ======================================================
@@ -106,9 +148,9 @@ let state = STATE.MENU;
 let frame = 0;
 let score = 0;
 
-let speed = 2.5;
-let gap = 230;
-let spawnRate = 115;
+let speed = 3;
+let gap = 240;
+let spawnRate = 110;
 
 /* ======================================================
    PLAYER
@@ -255,20 +297,19 @@ ctx.restore();
    COINS
 ====================================================== */
 
-function spawnCoin(){
+function spawnCoin(pipe){
+
+/* ALWAYS IN SAFE GAP */
 
 coinsArr.push({
 
-x:canvas.width+50,
+x:pipe.x + 42,
 
-y:Math.random()*
-(canvas.height-220)+110,
+y:pipe.top + gap/2,
 
 r:12,
 
-value:[1,1,1,2,2,3][
-Math.floor(Math.random()*6)
-]
+value:1
 
 });
 
@@ -287,9 +328,11 @@ let dist = Math.sqrt(dx*dx+dy*dy);
 
 if(dist < bird.r + c.r){
 
-coins += c.value;
+coins += 1;
 
 saveData("sky_coins",coins);
+
+playSound("coin");
 
 c.hit = true;
 
@@ -314,9 +357,9 @@ ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
 ctx.fill();
 
 ctx.fillStyle="#fff";
-ctx.font="12px Arial";
+ctx.font="14px Arial";
 ctx.textAlign="center";
-ctx.fillText(c.value,c.x,c.y+4);
+ctx.fillText("1",c.x,c.y+5);
 
 });
 
@@ -334,13 +377,19 @@ let top =
 Math.random() *
 (canvas.height - 360) + 80;
 
-pipes.push({
+let pipe = {
 
 x:canvas.width,
 top:top,
 passed:false
 
-});
+};
+
+pipes.push(pipe);
+
+/* SPAWN ONE COIN IN SAFE PATH */
+
+spawnCoin(pipe);
 
 }
 
@@ -369,6 +418,7 @@ bird.y + bird.r - 7 > p.top + gap;
 
 if(collideX && collideY){
 
+playSound("dead");
 state = STATE.OVER;
 
 }
@@ -421,6 +471,8 @@ if(bird.y + bird.r > canvas.height){
 
 bird.y = canvas.height - bird.r;
 
+playSound("dead");
+
 state = STATE.OVER;
 
 }
@@ -441,7 +493,7 @@ bird.vel = 0;
 function drawUI(){
 
 ctx.fillStyle="#fff";
-ctx.font="28px Arial";
+ctx.font="26px Arial";
 
 ctx.fillText("Score: "+score,20,40);
 ctx.fillText("Coins: "+coins,20,80);
@@ -461,7 +513,7 @@ ctx.fillStyle="#fff";
 
 ctx.textAlign="center";
 
-ctx.font="60px Arial";
+ctx.font="clamp(40px,8vw,70px) Arial";
 
 ctx.fillText(
 "SKY MOCHI",
@@ -473,7 +525,7 @@ ctx.fillStyle="#4CAF50";
 
 ctx.fillRect(
 canvas.width/2-120,
-350,
+320,
 240,
 70
 );
@@ -485,14 +537,14 @@ ctx.font="35px Arial";
 ctx.fillText(
 "PLAY",
 canvas.width/2,
-398
+365
 );
 
 ctx.fillStyle="#FFB703";
 
 ctx.fillRect(
 canvas.width/2-120,
-460,
+430,
 240,
 70
 );
@@ -502,7 +554,7 @@ ctx.fillStyle="#fff";
 ctx.fillText(
 "SHOP",
 canvas.width/2,
-508
+475
 );
 
 ctx.textAlign="left";
@@ -540,7 +592,7 @@ canvas.width/2,
 skins.forEach((s,i)=>{
 
 let x = 90 + i*140;
-let y = 320;
+let y = canvas.height/2;
 
 ctx.fillStyle="rgba(255,255,255,0.15)";
 
@@ -615,9 +667,8 @@ coinsArr = [];
 score = 0;
 frame = 0;
 
-speed = 2.5;
-gap = 230;
-spawnRate = 115;
+speed = 3;
+gap = 240;
 
 bird.y = canvas.height/2;
 bird.vel = 0;
@@ -656,25 +707,19 @@ if(frame % spawnRate === 0){
 
 createPipe();
 
-if(Math.random() < 0.9){
-
-spawnCoin();
-
-}
-
 }
 
 if(score > 20){
 
-speed = 3.1;
-gap = 210;
+speed = 3.5;
+gap = 220;
 
 }
 
 if(score > 40){
 
-speed = 3.8;
-gap = 190;
+speed = 4.2;
+gap = 200;
 
 }
 
@@ -700,7 +745,7 @@ drawPipes();
 drawCoins();
 drawBird();
 
-ctx.fillStyle="rgba(0,0,0,0.5)";
+ctx.fillStyle="rgba(0,0,0,0.55)";
 ctx.fillRect(
 0,
 0,
@@ -712,26 +757,58 @@ ctx.fillStyle="#fff";
 
 ctx.textAlign="center";
 
-ctx.font="60px Arial";
+ctx.font="50px Arial";
 
 ctx.fillText(
 "GAME OVER",
 canvas.width/2,
-canvas.height/2-60
+canvas.height/2-100
 );
 
-ctx.font="35px Arial";
+ctx.font="32px Arial";
 
 ctx.fillText(
 "Score: "+score,
 canvas.width/2,
-canvas.height/2
+canvas.height/2-40
 );
 
+/* RESTART BUTTON */
+
+ctx.fillStyle="#4CAF50";
+
+ctx.fillRect(
+canvas.width/2-120,
+canvas.height/2+10,
+240,
+60
+);
+
+ctx.fillStyle="#fff";
+
 ctx.fillText(
-"Tap To Restart",
+"RESTART",
 canvas.width/2,
-canvas.height/2+60
+canvas.height/2+50
+);
+
+/* SHOP BUTTON */
+
+ctx.fillStyle="#FFB703";
+
+ctx.fillRect(
+canvas.width/2-120,
+canvas.height/2+90,
+240,
+60
+);
+
+ctx.fillStyle="#fff";
+
+ctx.fillText(
+"SHOP",
+canvas.width/2,
+canvas.height/2+130
 );
 
 ctx.textAlign="left";
@@ -752,6 +829,10 @@ function tap(e){
 
 e.preventDefault();
 
+if(audioCtx.state==="suspended"){
+audioCtx.resume();
+}
+
 const rect = canvas.getBoundingClientRect();
 
 const x =
@@ -771,8 +852,8 @@ if(state === STATE.MENU){
 if(
 x > canvas.width/2-120 &&
 x < canvas.width/2+120 &&
-y > 350 &&
-y < 420
+y > 320 &&
+y < 390
 ){
 
 reset();
@@ -783,8 +864,8 @@ return;
 if(
 x > canvas.width/2-120 &&
 x < canvas.width/2+120 &&
-y > 460 &&
-y < 530
+y > 430 &&
+y < 500
 ){
 
 state = STATE.SHOP;
@@ -813,7 +894,7 @@ return;
 skins.forEach((s,i)=>{
 
 let sx = 90 + i*140;
-let sy = 320;
+let sy = canvas.height/2;
 
 if(
 
@@ -856,8 +937,33 @@ return;
 
 if(state === STATE.OVER){
 
+/* RESTART */
+
+if(
+x > canvas.width/2-120 &&
+x < canvas.width/2+120 &&
+y > canvas.height/2+10 &&
+y < canvas.height/2+70
+){
+
 reset();
 return;
+
+}
+
+/* SHOP */
+
+if(
+x > canvas.width/2-120 &&
+x < canvas.width/2+120 &&
+y > canvas.height/2+90 &&
+y < canvas.height/2+150
+){
+
+state = STATE.SHOP;
+return;
+
+}
 
 }
 
@@ -866,6 +972,8 @@ return;
 if(state === STATE.PLAY){
 
 bird.vel = bird.lift;
+
+playSound("jump");
 
 }
 
