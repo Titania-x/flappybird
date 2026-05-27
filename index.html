@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
 
-<title>Sky Mochi Deluxe</title>
+<title>Dino Mochi</title>
 
 <style>
 
@@ -39,7 +38,7 @@ height:100vh;
 <script>
 
 /* ======================================================
-   SAFE STORAGE
+   STORAGE
 ====================================================== */
 
 function saveData(key,value){
@@ -47,55 +46,21 @@ function saveData(key,value){
 try{
 localStorage.setItem(key,JSON.stringify(value));
 }catch(e){}
+
 }
 
 function loadData(key,def){
 
 try{
+
 const v = localStorage.getItem(key);
 return v ? JSON.parse(v) : def;
+
 }catch(e){
+
 return def;
+
 }
-}
-
-/* ======================================================
-   AUDIO
-====================================================== */
-
-const audioCtx =
-new (window.AudioContext || window.webkitAudioContext)();
-
-function playSound(type){
-
-const osc = audioCtx.createOscillator();
-const gain = audioCtx.createGain();
-
-osc.connect(gain);
-gain.connect(audioCtx.destination);
-
-if(type==="jump"){
-osc.frequency.value = 320;
-}
-
-if(type==="coin"){
-osc.frequency.value = 700;
-}
-
-if(type==="dead"){
-osc.frequency.value = 120;
-}
-
-osc.type = "square";
-
-gain.gain.setValueAtTime(0.12,audioCtx.currentTime);
-gain.gain.exponentialRampToValueAtTime(
-0.001,
-audioCtx.currentTime + 0.25
-);
-
-osc.start();
-osc.stop(audioCtx.currentTime + 0.25);
 
 }
 
@@ -118,13 +83,71 @@ resize();
 window.addEventListener("resize",resize);
 
 /* ======================================================
-   SAVE DATA
+   AUDIO
 ====================================================== */
 
-let highScore = loadData("sky_high",0);
-let coins = loadData("sky_coins",0);
-let ownedSkins = loadData("sky_skins",[0]);
-let currentSkin = loadData("sky_skin",0);
+const AudioContextClass =
+window.AudioContext || window.webkitAudioContext;
+
+const audioCtx = new AudioContextClass();
+
+function sound(type){
+
+const osc = audioCtx.createOscillator();
+const gain = audioCtx.createGain();
+
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+
+if(type==="jump"){
+
+osc.frequency.value = 220;
+
+}
+
+if(type==="coin"){
+
+osc.frequency.value = 880;
+
+}
+
+if(type==="dead"){
+
+osc.frequency.value = 90;
+
+}
+
+if(type==="roar"){
+
+osc.frequency.value = 140;
+
+}
+
+osc.type = "sawtooth";
+
+gain.gain.setValueAtTime(
+0.15,
+audioCtx.currentTime
+);
+
+gain.gain.exponentialRampToValueAtTime(
+0.0001,
+audioCtx.currentTime + 0.3
+);
+
+osc.start();
+osc.stop(audioCtx.currentTime + 0.3);
+
+}
+
+/* ======================================================
+   SAVE
+====================================================== */
+
+let highScore = loadData("dino_high",0);
+let coins = loadData("dino_coins",0);
+let ownedSkins = loadData("dino_skins",[0]);
+let currentSkin = loadData("dino_skin",0);
 
 /* ======================================================
    STATES
@@ -149,70 +172,62 @@ let frame = 0;
 let score = 0;
 
 let speed = 3;
-let gap = 240;
+let gap = 250;
 let spawnRate = 110;
 
 /* ======================================================
    PLAYER
 ====================================================== */
 
-const bird = {
+const dino = {
 
 x:120,
 y:300,
-r:22,
+r:24,
 
 vel:0,
 
 gravity:0.42,
-lift:-8.5
+lift:-8.8
 
 };
 
 /* ======================================================
-   SKINS
+   DINO SKINS
 ====================================================== */
 
 const skins = [
 
 {
 name:"Rex",
-body:"#FFD166",
-wing:"#FFC300",
-blush:"#FF8FAB",
+body:"#6BCB77",
+belly:"#C7F9CC",
+spike:"#2D6A4F",
 price:0
 },
 
 {
-name:"Tricera",
-body:"#7BD389",
-wing:"#A0E7E5",
-blush:"#FFB7B2",
-price:5
-},
-
-{
 name:"Raptor",
-body:"#CDB4DB",
-wing:"#FFC8DD",
-blush:"#FFAFCC",
+body:"#4D96FF",
+belly:"#D7E3FC",
+spike:"#1E3A8A",
 price:10
 },
 
 {
 name:"Spino",
-body:"#90CAF9",
-wing:"#64B5F6",
-blush:"#F48FB1",
-price:15
+body:"#FF6B6B",
+belly:"#FFD6A5",
+spike:"#C1121F",
+price:20
 },
 
 {
 name:"Dragon",
-body:"#FF6B6B",
-wing:"#FFB347",
-blush:"#FFD6A5",
-price:20
+body:"#9D4EDD",
+belly:"#E0AAFF",
+spike:"#5A189A",
+price:30
 }
 
 ];
@@ -234,59 +249,107 @@ let g = ctx.createLinearGradient(
 0,0,0,canvas.height
 );
 
-if(score < 40){
-
-g.addColorStop(0,"#89f7fe");
-g.addColorStop(1,"#66a6ff");
-
-}else{
-
-g.addColorStop(0,"#141E30");
-g.addColorStop(1,"#243B55");
-
-}
+g.addColorStop(0,"#87CEEB");
+g.addColorStop(1,"#3A7D44");
 
 ctx.fillStyle = g;
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
+/* mountains */
+
+ctx.fillStyle="#5B8C5A";
+
+for(let i=0;i<canvas.width;i+=220){
+
+ctx.beginPath();
+
+ctx.moveTo(i,canvas.height);
+
+ctx.lineTo(i+110,canvas.height-180);
+
+ctx.lineTo(i+220,canvas.height);
+
+ctx.fill();
+
+}
+
+/* ground */
+
+ctx.fillStyle="#4E944F";
+
+ctx.fillRect(
+0,
+canvas.height-70,
+canvas.width,
+70
+);
+
 }
 
 /* ======================================================
-   BIRD
+   DINO
 ====================================================== */
 
-function drawBird(){
+function drawDino(){
 
 let s = skins[currentSkin];
 
 ctx.save();
 
-ctx.translate(bird.x,bird.y);
+ctx.translate(dino.x,dino.y);
 
-ctx.rotate(bird.vel * 0.04);
+ctx.rotate(dino.vel * 0.03);
 
-ctx.fillStyle = s.body;
+/* body */
+
+ctx.fillStyle=s.body;
 
 ctx.beginPath();
-ctx.arc(0,0,bird.r,0,Math.PI*2);
+ctx.arc(0,0,dino.r,0,Math.PI*2);
 ctx.fill();
 
-ctx.fillStyle = s.wing;
+/* belly */
+
+ctx.fillStyle=s.belly;
 
 ctx.beginPath();
-ctx.ellipse(-6,5,12,8,0,0,Math.PI*2);
+ctx.arc(3,6,12,0,Math.PI*2);
 ctx.fill();
 
-ctx.fillStyle = "#000";
+/* tail */
+
+ctx.fillStyle=s.body;
 
 ctx.beginPath();
-ctx.arc(8,-5,3,0,Math.PI*2);
+
+ctx.moveTo(-20,5);
+ctx.lineTo(-40,0);
+ctx.lineTo(-20,-8);
+
 ctx.fill();
 
-ctx.fillStyle = s.blush;
+/* spikes */
+
+ctx.fillStyle=s.spike;
+
+for(let i=-10;i<15;i+=10){
 
 ctx.beginPath();
-ctx.arc(-8,6,4,0,Math.PI*2);
+
+ctx.moveTo(i,-18);
+ctx.lineTo(i+5,-32);
+ctx.lineTo(i+10,-18);
+
+ctx.fill();
+
+}
+
+/* eye */
+
+ctx.fillStyle="#000";
+
+ctx.beginPath();
+ctx.arc(8,-6,3,0,Math.PI*2);
 ctx.fill();
 
 ctx.restore();
@@ -299,17 +362,16 @@ ctx.restore();
 
 function spawnCoin(pipe){
 
-/* ALWAYS IN SAFE GAP */
+/* ALWAYS INSIDE SAFE GAP */
+
+let safeY =
+pipe.top + (gap/2);
 
 coinsArr.push({
 
 x:pipe.x + 42,
-
-y:pipe.top + gap/2,
-
-r:12,
-
-value:1
+y:safeY,
+r:11
 
 });
 
@@ -321,18 +383,18 @@ coinsArr.forEach(c=>{
 
 c.x -= speed;
 
-let dx = bird.x - c.x;
-let dy = bird.y - c.y;
+let dx = dino.x - c.x;
+let dy = dino.y - c.y;
 
 let dist = Math.sqrt(dx*dx+dy*dy);
 
-if(dist < bird.r + c.r){
+if(dist < dino.r + c.r){
 
-coins += 1;
+coins++;
 
-saveData("sky_coins",coins);
+saveData("dino_coins",coins);
 
-playSound("coin");
+sound("coin");
 
 c.hit = true;
 
@@ -356,14 +418,11 @@ ctx.beginPath();
 ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
 ctx.fill();
 
-ctx.fillStyle="#fff";
-ctx.font="14px Arial";
-ctx.textAlign="center";
-ctx.fillText("1",c.x,c.y+5);
+ctx.strokeStyle="#FFF";
+ctx.lineWidth=3;
+ctx.stroke();
 
 });
-
-ctx.textAlign="left";
 
 }
 
@@ -375,7 +434,7 @@ function createPipe(){
 
 let top =
 Math.random() *
-(canvas.height - 360) + 80;
+(canvas.height - 500) + 120;
 
 let pipe = {
 
@@ -387,7 +446,7 @@ passed:false
 
 pipes.push(pipe);
 
-/* SPAWN ONE COIN IN SAFE PATH */
+/* SPAWN COIN SAFELY */
 
 spawnCoin(pipe);
 
@@ -399,26 +458,29 @@ pipes.forEach(p=>{
 
 p.x -= speed;
 
-if(!p.passed && p.x+85 < bird.x){
+if(!p.passed && p.x+90 < dino.x){
 
 p.passed = true;
 score++;
 
 }
 
+/* collision */
+
 let collideX =
 
-bird.x + bird.r - 5 > p.x &&
-bird.x - bird.r + 5 < p.x + 85;
+dino.x + dino.r > p.x &&
+dino.x - dino.r < p.x + 90;
 
 let collideY =
 
-bird.y - bird.r + 7 < p.top ||
-bird.y + bird.r - 7 > p.top + gap;
+dino.y - dino.r < p.top ||
+dino.y + dino.r > p.top + gap;
 
 if(collideX && collideY){
 
-playSound("dead");
+sound("dead");
+
 state = STATE.OVER;
 
 }
@@ -426,7 +488,7 @@ state = STATE.OVER;
 });
 
 pipes = pipes.filter(
-p => p.x > -100
+p => p.x > -120
 );
 
 }
@@ -435,52 +497,66 @@ function drawPipes(){
 
 pipes.forEach(p=>{
 
-ctx.fillStyle="#56C271";
+/* cactus tubes */
+
+ctx.fillStyle="#2D6A4F";
 
 ctx.fillRect(
 p.x,
 0,
-85,
+90,
 p.top
 );
 
 ctx.fillRect(
 p.x,
 p.top+gap,
-85,
+90,
 canvas.height
 );
+
+/* cactus lines */
+
+ctx.strokeStyle="#95D5B2";
+ctx.lineWidth=4;
+
+for(let y=0;y<p.top;y+=40){
+
+ctx.beginPath();
+
+ctx.moveTo(p.x+25,y);
+ctx.lineTo(p.x+25,y+20);
+
+ctx.stroke();
+
+}
 
 });
 
 }
 
 /* ======================================================
-   PHYSICS
+   PLAYER PHYSICS
 ====================================================== */
 
-function updateBird(){
+function updateDino(){
 
-bird.vel += bird.gravity;
+dino.vel += dino.gravity;
 
-bird.vel *= 0.995;
+dino.y += dino.vel;
 
-bird.y += bird.vel;
+if(dino.y + dino.r > canvas.height-70){
 
-if(bird.y + bird.r > canvas.height){
-
-bird.y = canvas.height - bird.r;
-
-playSound("dead");
+sound("dead");
 
 state = STATE.OVER;
 
 }
 
-if(bird.y - bird.r < 0){
+if(dino.y - dino.r < 0){
 
-bird.y = bird.r;
-bird.vel = 0;
+dino.y = dino.r;
+dino.vel = 0;
 
 }
 
@@ -492,12 +568,27 @@ bird.vel = 0;
 
 function drawUI(){
 
-ctx.fillStyle="#fff";
+ctx.fillStyle="#FFF";
+
 ctx.font="26px Arial";
 
-ctx.fillText("Score: "+score,20,40);
-ctx.fillText("Coins: "+coins,20,80);
-ctx.fillText("High: "+highScore,20,120);
+ctx.fillText(
+"Score: "+score,
+20,
+40
+);
+
+ctx.fillText(
+"Coins: "+coins,
+20,
+80
+);
+
+ctx.fillText(
+"High: "+highScore,
+20,
+120
+);
 
 }
 
@@ -509,28 +600,38 @@ function drawMenu(){
 
 drawBackground();
 
-ctx.fillStyle="#fff";
-
 ctx.textAlign="center";
 
-ctx.font="clamp(40px,8vw,70px) Arial";
+ctx.fillStyle="#FFF";
+
+ctx.font="60px Arial";
 
 ctx.fillText(
-"SKY MOCHI",
+"DINO MOCHI",
 canvas.width/2,
 180
 );
 
-ctx.fillStyle="#4CAF50";
+ctx.font="28px Arial";
+
+ctx.fillText(
+"Roar and Fly!",
+canvas.width/2,
+230
+);
+
+/* play */
+
+ctx.fillStyle="#38B000";
 
 ctx.fillRect(
-canvas.width/2-120,
+canvas.width/2-130,
 320,
-240,
+260,
 70
 );
 
-ctx.fillStyle="#fff";
+ctx.fillStyle="#FFF";
 
 ctx.font="35px Arial";
 
@@ -540,16 +641,18 @@ canvas.width/2,
 365
 );
 
+/* shop */
+
 ctx.fillStyle="#FFB703";
 
 ctx.fillRect(
-canvas.width/2-120,
+canvas.width/2-130,
 430,
-240,
+260,
 70
 );
 
-ctx.fillStyle="#fff";
+ctx.fillStyle="#FFF";
 
 ctx.fillText(
 "SHOP",
@@ -569,83 +672,97 @@ function drawShop(){
 
 drawBackground();
 
-ctx.fillStyle="#fff";
+ctx.fillStyle="#FFF";
 
 ctx.textAlign="center";
 
-ctx.font="50px Arial";
+ctx.font="48px Arial";
 
 ctx.fillText(
-"SHOP",
+"DINO SHOP",
 canvas.width/2,
-90
+80
 );
 
-ctx.font="28px Arial";
+ctx.font="24px Arial";
 
 ctx.fillText(
 "Coins: "+coins,
 canvas.width/2,
-140
+120
 );
 
 skins.forEach((s,i)=>{
 
-let x = 90 + i*140;
+let x = 100 + i*150;
 let y = canvas.height/2;
 
 ctx.fillStyle="rgba(255,255,255,0.15)";
 
 ctx.fillRect(
-x-50,
+x-55,
 y-70,
-100,
-160
+110,
+170
 );
+
+/* dino icon */
 
 ctx.fillStyle=s.body;
 
 ctx.beginPath();
-ctx.arc(x,y,25,0,Math.PI*2);
+ctx.arc(x,y,26,0,Math.PI*2);
 ctx.fill();
 
-ctx.fillStyle="#fff";
-ctx.font="16px Arial";
+ctx.fillStyle=s.spike;
 
-ctx.fillText(s.name,x,y+50);
+ctx.fillRect(x-12,y-38,24,10);
+
+ctx.fillStyle="#FFF";
+
+ctx.font="18px Arial";
+
+ctx.fillText(
+s.name,
+x,
+y+55
+);
 
 if(ownedSkins.includes(i)){
 
 if(currentSkin===i){
 
-ctx.fillStyle="#4CAF50";
-ctx.fillText("USING",x,y+75);
+ctx.fillStyle="#38B000";
+ctx.fillText("USING",x,y+82);
 
 }else{
 
-ctx.fillStyle="#FFD166";
-ctx.fillText("USE",x,y+75);
+ctx.fillStyle="#FFD60A";
+ctx.fillText("USE",x,y+82);
 
 }
 
 }else{
 
-ctx.fillStyle="#FF6B6B";
+ctx.fillStyle="#FF595E";
+
 ctx.fillText(
 s.price+" COINS",
 x,
-y+75
+y+82
 );
 
 }
 
 });
 
+/* back */
+
 ctx.fillStyle="#222";
 
 ctx.fillRect(20,20,120,50);
 
-ctx.fillStyle="#fff";
+ctx.fillStyle="#FFF";
 
 ctx.font="24px Arial";
 
@@ -667,13 +784,12 @@ coinsArr = [];
 score = 0;
 frame = 0;
 
-speed = 3;
-gap = 240;
-
-bird.y = canvas.height/2;
-bird.vel = 0;
+dino.y = canvas.height/2;
+dino.vel = 0;
 
 state = STATE.PLAY;
+
+sound("roar");
 
 }
 
@@ -685,67 +801,58 @@ function loop(){
 
 drawBackground();
 
-if(state === STATE.MENU){
+if(state===STATE.MENU){
 
 drawMenu();
 
 }
 
-else if(state === STATE.SHOP){
+else if(state===STATE.SHOP){
 
 drawShop();
 
 }
 
-else if(state === STATE.PLAY){
+else if(state===STATE.PLAY){
 
-updateBird();
+updateDino();
 updatePipes();
 updateCoins();
 
-if(frame % spawnRate === 0){
+if(frame % spawnRate===0){
 
 createPipe();
 
 }
 
-if(score > 20){
-
-speed = 3.5;
-gap = 220;
-
-}
-
-if(score > 40){
-
-speed = 4.2;
-gap = 200;
-
-}
-
 drawPipes();
 drawCoins();
-drawBird();
+drawDino();
 drawUI();
 
 frame++;
 
 }
 
-else if(state === STATE.OVER){
+else if(state===STATE.OVER){
 
 if(score > highScore){
 
 highScore = score;
-saveData("sky_high",highScore);
+
+saveData(
+"dino_high",
+highScore
+);
 
 }
 
 drawPipes();
 drawCoins();
-drawBird();
+drawDino();
 
-ctx.fillStyle="rgba(0,0,0,0.55)";
+ctx.fillStyle="rgba(0,0,0,0.6)";
+
 ctx.fillRect(
 0,
 0,
@@ -753,16 +860,16 @@ canvas.width,
 canvas.height
 );
 
-ctx.fillStyle="#fff";
+ctx.fillStyle="#FFF";
 
 ctx.textAlign="center";
 
-ctx.font="50px Arial";
+ctx.font="52px Arial";
 
 ctx.fillText(
 "GAME OVER",
 canvas.width/2,
-canvas.height/2-100
+canvas.height/2-90
 );
 
 ctx.font="32px Arial";
@@ -770,45 +877,45 @@ ctx.font="32px Arial";
 ctx.fillText(
 "Score: "+score,
 canvas.width/2,
-canvas.height/2-40
+canvas.height/2-35
 );
 
-/* RESTART BUTTON */
+/* restart */
 
-ctx.fillStyle="#4CAF50";
+ctx.fillStyle="#38B000";
 
 ctx.fillRect(
-canvas.width/2-120,
-canvas.height/2+10,
-240,
-60
+canvas.width/2-130,
+canvas.height/2+20,
+260,
+65
 );
 
-ctx.fillStyle="#fff";
+ctx.fillStyle="#FFF";
 
 ctx.fillText(
 "RESTART",
 canvas.width/2,
-canvas.height/2+50
+canvas.height/2+62
 );
 
-/* SHOP BUTTON */
+/* shop button */
 
 ctx.fillStyle="#FFB703";
 
 ctx.fillRect(
-canvas.width/2-120,
-canvas.height/2+90,
-240,
-60
+canvas.width/2-130,
+canvas.height/2+105,
+260,
+65
 );
 
-ctx.fillStyle="#fff";
+ctx.fillStyle="#FFF";
 
 ctx.fillText(
 "SHOP",
 canvas.width/2,
-canvas.height/2+130
+canvas.height/2+147
 );
 
 ctx.textAlign="left";
@@ -830,10 +937,13 @@ function tap(e){
 e.preventDefault();
 
 if(audioCtx.state==="suspended"){
+
 audioCtx.resume();
+
 }
 
-const rect = canvas.getBoundingClientRect();
+const rect =
+canvas.getBoundingClientRect();
 
 const x =
 (e.touches ?
@@ -847,13 +957,15 @@ e.clientY) - rect.top;
 
 /* MENU */
 
-if(state === STATE.MENU){
+if(state===STATE.MENU){
 
 if(
-x > canvas.width/2-120 &&
-x < canvas.width/2+120 &&
+
+x > canvas.width/2-130 &&
+x < canvas.width/2+130 &&
 y > 320 &&
 y < 390
+
 ){
 
 reset();
@@ -862,10 +974,12 @@ return;
 }
 
 if(
-x > canvas.width/2-120 &&
-x < canvas.width/2+120 &&
+
+x > canvas.width/2-130 &&
+x < canvas.width/2+130 &&
 y > 430 &&
 y < 500
+
 ){
 
 state = STATE.SHOP;
@@ -877,13 +991,15 @@ return;
 
 /* SHOP */
 
-if(state === STATE.SHOP){
+if(state===STATE.SHOP){
 
 if(
+
 x > 20 &&
 x < 140 &&
 y > 20 &&
 y < 70
+
 ){
 
 state = STATE.MENU;
@@ -893,15 +1009,15 @@ return;
 
 skins.forEach((s,i)=>{
 
-let sx = 90 + i*140;
+let sx = 100 + i*150;
 let sy = canvas.height/2;
 
 if(
 
-x > sx-50 &&
-x < sx+50 &&
+x > sx-55 &&
+x < sx+55 &&
 y > sy-70 &&
-y < sy+90
+y < sy+100
 
 ){
 
@@ -909,7 +1025,10 @@ if(ownedSkins.includes(i)){
 
 currentSkin = i;
 
-saveData("sky_skin",currentSkin);
+saveData(
+"dino_skin",
+currentSkin
+);
 
 }else if(coins >= s.price){
 
@@ -919,9 +1038,20 @@ ownedSkins.push(i);
 
 currentSkin = i;
 
-saveData("sky_coins",coins);
-saveData("sky_skins",ownedSkins);
-saveData("sky_skin",currentSkin);
+saveData(
+"dino_coins",
+coins
+);
+
+saveData(
+"dino_skins",
+ownedSkins
+);
+
+saveData(
+"dino_skin",
+currentSkin
+);
 
 }
 
@@ -935,15 +1065,17 @@ return;
 
 /* OVER */
 
-if(state === STATE.OVER){
+if(state===STATE.OVER){
 
-/* RESTART */
+/* restart */
 
 if(
-x > canvas.width/2-120 &&
-x < canvas.width/2+120 &&
-y > canvas.height/2+10 &&
-y < canvas.height/2+70
+
+x > canvas.width/2-130 &&
+x < canvas.width/2+130 &&
+y > canvas.height/2+20 &&
+y < canvas.height/2+85
+
 ){
 
 reset();
@@ -951,13 +1083,15 @@ return;
 
 }
 
-/* SHOP */
+/* shop */
 
 if(
-x > canvas.width/2-120 &&
-x < canvas.width/2+120 &&
-y > canvas.height/2+90 &&
-y < canvas.height/2+150
+
+x > canvas.width/2-130 &&
+x < canvas.width/2+130 &&
+y > canvas.height/2+105 &&
+y < canvas.height/2+170
+
 ){
 
 state = STATE.SHOP;
@@ -969,11 +1103,11 @@ return;
 
 /* PLAY */
 
-if(state === STATE.PLAY){
+if(state===STATE.PLAY){
 
-bird.vel = bird.lift;
+dino.vel = dino.lift;
 
-playSound("jump");
+sound("jump");
 
 }
 
