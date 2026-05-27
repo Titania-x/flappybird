@@ -1,26 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Sky Mochi Deluxe</title>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width,initial-scale=1.0,user-scalable=no">
+
+<title>Sky Mochi</title>
 
 <style>
+
 *{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
+margin:0;
+padding:0;
+box-sizing:border-box;
+-webkit-tap-highlight-color:transparent;
 }
 
 body{
-  overflow:hidden;
-  font-family:Arial, sans-serif;
-  background:#000;
+overflow:hidden;
+background:#000;
+touch-action:none;
+font-family:Arial,sans-serif;
 }
 
 canvas{
-  display:block;
+display:block;
 }
+
 </style>
 </head>
 
@@ -30,889 +36,851 @@ canvas{
 
 <script>
 
-/* =========================================================
+/* ======================================================
+   SAFE STORAGE
+====================================================== */
+
+function saveData(key,value){
+
+try{
+localStorage.setItem(key,JSON.stringify(value));
+}catch(e){}
+}
+
+function loadData(key,def){
+
+try{
+const v = localStorage.getItem(key);
+return v ? JSON.parse(v) : def;
+}catch(e){
+return def;
+}
+}
+
+/* ======================================================
    CANVAS
-========================================================= */
+====================================================== */
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
 }
+
 resize();
-window.addEventListener("resize", resize);
 
-/* =========================================================
+window.addEventListener("resize",resize);
+
+/* ======================================================
    SAVE DATA
-========================================================= */
+====================================================== */
 
-let highScore =
-Number(localStorage.getItem("sky_high")) || 0;
+let highScore = loadData("sky_high",0);
+let coins = loadData("sky_coins",0);
+let ownedSkins = loadData("sky_skins",[0]);
+let currentSkin = loadData("sky_skin",0);
 
-let coins =
-Number(localStorage.getItem("sky_coins")) || 0;
-
-let ownedSkins =
-JSON.parse(localStorage.getItem("sky_skins")) || [0];
-
-let currentSkin =
-Number(localStorage.getItem("sky_currentSkin")) || 0;
-
-/* =========================================================
-   GAME STATES
-========================================================= */
+/* ======================================================
+   STATES
+====================================================== */
 
 const STATE = {
-  MENU:0,
-  SHOP:1,
-  PLAY:2,
-  OVER:3
+
+MENU:0,
+SHOP:1,
+PLAY:2,
+OVER:3
+
 };
 
 let state = STATE.MENU;
 
-/* =========================================================
-   GAME VALUES
-========================================================= */
+/* ======================================================
+   GAME
+====================================================== */
 
 let frame = 0;
 let score = 0;
 
-let speed = 2.6;          // easier
-let spawnRate = 110;      // easier
-let gap = 230;            // easier
+let speed = 2.5;
+let gap = 230;
+let spawnRate = 115;
 
-/* =========================================================
-   BIRD / MOCHI
-========================================================= */
+/* ======================================================
+   PLAYER
+====================================================== */
 
 const bird = {
-  x:120,
-  y:300,
-  r:22,
-  vel:0,
-  gravity:0.42,
-  lift:-8.5
+
+x:120,
+y:300,
+r:22,
+
+vel:0,
+
+gravity:0.42,
+lift:-8.5
+
 };
 
-/* =========================================================
+/* ======================================================
    SKINS
-========================================================= */
+====================================================== */
 
 const skins = [
 
 {
-  name:"Rex",
-  body:"#FFD166",
-  wing:"#FFC300",
-  blush:"#FF8FAB",
-  price:0
+name:"Rex",
+body:"#FFD166",
+wing:"#FFC300",
+blush:"#FF8FAB",
+price:0
 },
 
 {
-  name:"Tricera",
-  body:"#7BD389",
-  wing:"#A0E7E5",
-  blush:"#FFB7B2",
-  price:5
+name:"Tricera",
+body:"#7BD389",
+wing:"#A0E7E5",
+blush:"#FFB7B2",
+price:5
 },
 
 {
-  name:"Raptor",
-  body:"#CDB4DB",
-  wing:"#FFC8DD",
-  blush:"#FFAFCC",
-  price:10
+name:"Raptor",
+body:"#CDB4DB",
+wing:"#FFC8DD",
+blush:"#FFAFCC",
+price:10
 },
 
 {
-  name:"Spino",
-  body:"#90CAF9",
-  wing:"#64B5F6",
-  blush:"#F48FB1",
-  price:15
+name:"Spino",
+body:"#90CAF9",
+wing:"#64B5F6",
+blush:"#F48FB1",
+price:15
 },
 
 {
-  name:"Dragon",
-  body:"#FF6B6B",
-  wing:"#FFB347",
-  blush:"#FFD6A5",
-  price:20
+name:"Dragon",
+body:"#FF6B6B",
+wing:"#FFB347",
+blush:"#FFD6A5",
+price:20
 }
 
 ];
 
-/* =========================================================
+/* ======================================================
    OBJECTS
-========================================================= */
+====================================================== */
 
 let pipes = [];
 let coinsArr = [];
 
-/* =========================================================
+/* ======================================================
    BACKGROUND
-========================================================= */
+====================================================== */
 
 function drawBackground(){
 
-  let g = ctx.createLinearGradient(
-    0,0,0,canvas.height
-  );
+let g = ctx.createLinearGradient(
+0,0,0,canvas.height
+);
 
-  if(score < 40){
-    g.addColorStop(0,"#89f7fe");
-    g.addColorStop(1,"#66a6ff");
-  }else{
-    g.addColorStop(0,"#141E30");
-    g.addColorStop(1,"#243B55");
-  }
+if(score < 40){
 
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+g.addColorStop(0,"#89f7fe");
+g.addColorStop(1,"#66a6ff");
 
-  // clouds
+}else{
 
-  ctx.fillStyle = "rgba(255,255,255,0.25)";
+g.addColorStop(0,"#141E30");
+g.addColorStop(1,"#243B55");
 
-  for(let i=0;i<5;i++){
-    ctx.beginPath();
-    ctx.arc(
-      (i*300 + frame*0.2)%canvas.width,
-      80 + i*40,
-      40,
-      0,
-      Math.PI*2
-    );
-    ctx.fill();
-  }
 }
 
-/* =========================================================
-   DRAW BIRD
-========================================================= */
+ctx.fillStyle = g;
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+}
+
+/* ======================================================
+   BIRD
+====================================================== */
 
 function drawBird(){
 
-  let s = skins[currentSkin];
+let s = skins[currentSkin];
 
-  ctx.save();
+ctx.save();
 
-  ctx.translate(bird.x, bird.y);
+ctx.translate(bird.x,bird.y);
 
-  // smoother rotation
-  ctx.rotate(bird.vel * 0.04);
+ctx.rotate(bird.vel * 0.04);
 
-  // body
-  ctx.fillStyle = s.body;
+ctx.fillStyle = s.body;
 
-  ctx.beginPath();
-  ctx.arc(0,0,bird.r,0,Math.PI*2);
-  ctx.fill();
+ctx.beginPath();
+ctx.arc(0,0,bird.r,0,Math.PI*2);
+ctx.fill();
 
-  // wing
-  ctx.fillStyle = s.wing;
+ctx.fillStyle = s.wing;
 
-  ctx.beginPath();
-  ctx.ellipse(-6,5,12,8,0,0,Math.PI*2);
-  ctx.fill();
+ctx.beginPath();
+ctx.ellipse(-6,5,12,8,0,0,Math.PI*2);
+ctx.fill();
 
-  // eye
-  ctx.fillStyle = "#000";
+ctx.fillStyle = "#000";
 
-  ctx.beginPath();
-  ctx.arc(8,-5,3,0,Math.PI*2);
-  ctx.fill();
+ctx.beginPath();
+ctx.arc(8,-5,3,0,Math.PI*2);
+ctx.fill();
 
-  // blush
-  ctx.fillStyle = s.blush;
+ctx.fillStyle = s.blush;
 
-  ctx.beginPath();
-  ctx.arc(-8,6,4,0,Math.PI*2);
-  ctx.fill();
+ctx.beginPath();
+ctx.arc(-8,6,4,0,Math.PI*2);
+ctx.fill();
 
-  ctx.restore();
+ctx.restore();
+
 }
 
-/* =========================================================
+/* ======================================================
    COINS
-========================================================= */
+====================================================== */
 
 function spawnCoin(){
 
-  coinsArr.push({
+coinsArr.push({
 
-    x:canvas.width + 50,
+x:canvas.width+50,
 
-    y:Math.random() *
-    (canvas.height - 220) + 110,
+y:Math.random()*
+(canvas.height-220)+110,
 
-    r:12,
+r:12,
 
-    value:[1,1,1,2,2,3][
-      Math.floor(Math.random()*6)
-    ]
-  });
+value:[1,1,1,2,2,3][
+Math.floor(Math.random()*6)
+]
+
+});
+
 }
 
 function updateCoins(){
 
-  coinsArr.forEach(c=>{
+coinsArr.forEach(c=>{
 
-    c.x -= speed;
+c.x -= speed;
 
-    let dx = bird.x - c.x;
-    let dy = bird.y - c.y;
+let dx = bird.x - c.x;
+let dy = bird.y - c.y;
 
-    let dist = Math.sqrt(dx*dx + dy*dy);
+let dist = Math.sqrt(dx*dx+dy*dy);
 
-    if(dist < bird.r + c.r){
+if(dist < bird.r + c.r){
 
-      coins += c.value;
+coins += c.value;
 
-      localStorage.setItem(
-        "sky_coins",
-        coins
-      );
+saveData("sky_coins",coins);
 
-      c.hit = true;
-    }
+c.hit = true;
 
-  });
+}
 
-  coinsArr = coinsArr.filter(
-    c => !c.hit && c.x > -50
-  );
+});
+
+coinsArr = coinsArr.filter(
+c => !c.hit && c.x > -50
+);
+
 }
 
 function drawCoins(){
 
-  coinsArr.forEach(c=>{
+coinsArr.forEach(c=>{
 
-    ctx.fillStyle = "#FFD700";
+ctx.fillStyle="#FFD700";
 
-    ctx.beginPath();
-    ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
-    ctx.fill();
+ctx.beginPath();
+ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
+ctx.fill();
 
-    ctx.fillStyle="#fff";
-    ctx.font="12px Arial";
-    ctx.textAlign="center";
-    ctx.fillText(c.value,c.x,c.y+4);
+ctx.fillStyle="#fff";
+ctx.font="12px Arial";
+ctx.textAlign="center";
+ctx.fillText(c.value,c.x,c.y+4);
 
-  });
+});
 
-  ctx.textAlign="left";
+ctx.textAlign="left";
+
 }
 
-/* =========================================================
-   PHYSICS
-========================================================= */
-
-function updateBird(){
-
-  // MUCH BETTER FEEL
-  bird.vel += bird.gravity;
-
-  bird.vel *= 0.995;
-
-  bird.y += bird.vel;
-
-  // floor
-  if(bird.y + bird.r > canvas.height){
-
-    bird.y = canvas.height - bird.r;
-
-    state = STATE.OVER;
-  }
-
-  // ceiling
-  if(bird.y - bird.r < 0){
-
-    bird.y = bird.r;
-    bird.vel = 0;
-  }
-}
-
-/* =========================================================
+/* ======================================================
    PIPES
-========================================================= */
+====================================================== */
 
 function createPipe(){
 
-  let top =
-  Math.random() *
-  (canvas.height - 360) + 80;
+let top =
+Math.random() *
+(canvas.height - 360) + 80;
 
-  pipes.push({
-    x:canvas.width,
-    top:top,
-    passed:false
-  });
-}
+pipes.push({
 
-function drawPipes(){
+x:canvas.width,
+top:top,
+passed:false
 
-  pipes.forEach(p=>{
-
-    // top
-    ctx.fillStyle="#56C271";
-
-    ctx.fillRect(
-      p.x,
-      0,
-      85,
-      p.top
-    );
-
-    // bottom
-    ctx.fillRect(
-      p.x,
-      p.top + gap,
-      85,
-      canvas.height
-    );
-
-    // caps
-    ctx.fillStyle="#3FA85B";
-
-    ctx.fillRect(
-      p.x - 5,
-      p.top - 20,
-      95,
-      20
-    );
-
-    ctx.fillRect(
-      p.x - 5,
-      p.top + gap,
-      95,
-      20
-    );
-
-  });
+});
 
 }
 
 function updatePipes(){
 
-  pipes.forEach(p=>{
+pipes.forEach(p=>{
 
-    p.x -= speed;
+p.x -= speed;
 
-    // score
-    if(!p.passed && p.x + 85 < bird.x){
+if(!p.passed && p.x+85 < bird.x){
 
-      p.passed = true;
-      score++;
-    }
+p.passed = true;
+score++;
 
-    // BETTER HITBOX
-    let collideX =
-    bird.x + bird.r - 4 > p.x &&
-    bird.x - bird.r + 4 < p.x + 85;
-
-    let collideY =
-    bird.y - bird.r + 6 < p.top ||
-    bird.y + bird.r - 6 > p.top + gap;
-
-    if(collideX && collideY){
-
-      state = STATE.OVER;
-    }
-
-  });
-
-  pipes = pipes.filter(
-    p => p.x > -120
-  );
 }
 
-/* =========================================================
+let collideX =
+
+bird.x + bird.r - 5 > p.x &&
+bird.x - bird.r + 5 < p.x + 85;
+
+let collideY =
+
+bird.y - bird.r + 7 < p.top ||
+bird.y + bird.r - 7 > p.top + gap;
+
+if(collideX && collideY){
+
+state = STATE.OVER;
+
+}
+
+});
+
+pipes = pipes.filter(
+p => p.x > -100
+);
+
+}
+
+function drawPipes(){
+
+pipes.forEach(p=>{
+
+ctx.fillStyle="#56C271";
+
+ctx.fillRect(
+p.x,
+0,
+85,
+p.top
+);
+
+ctx.fillRect(
+p.x,
+p.top+gap,
+85,
+canvas.height
+);
+
+});
+
+}
+
+/* ======================================================
+   PHYSICS
+====================================================== */
+
+function updateBird(){
+
+bird.vel += bird.gravity;
+
+bird.vel *= 0.995;
+
+bird.y += bird.vel;
+
+if(bird.y + bird.r > canvas.height){
+
+bird.y = canvas.height - bird.r;
+
+state = STATE.OVER;
+
+}
+
+if(bird.y - bird.r < 0){
+
+bird.y = bird.r;
+bird.vel = 0;
+
+}
+
+}
+
+/* ======================================================
    UI
-========================================================= */
+====================================================== */
 
 function drawUI(){
 
-  ctx.fillStyle="#fff";
+ctx.fillStyle="#fff";
+ctx.font="28px Arial";
 
-  ctx.font="28px Arial";
+ctx.fillText("Score: "+score,20,40);
+ctx.fillText("Coins: "+coins,20,80);
+ctx.fillText("High: "+highScore,20,120);
 
-  ctx.fillText(
-    "Score: " + score,
-    20,
-    40
-  );
-
-  ctx.fillText(
-    "Coins: " + coins,
-    20,
-    80
-  );
-
-  ctx.fillText(
-    "High: " + highScore,
-    20,
-    120
-  );
 }
 
-/* =========================================================
+/* ======================================================
    MENU
-========================================================= */
+====================================================== */
 
 function drawMenu(){
 
-  drawBackground();
+drawBackground();
 
-  ctx.fillStyle="#fff";
+ctx.fillStyle="#fff";
 
-  ctx.textAlign="center";
+ctx.textAlign="center";
 
-  ctx.font="65px Arial";
+ctx.font="60px Arial";
 
-  ctx.fillText(
-    "SKY MOCHI",
-    canvas.width/2,
-    180
-  );
+ctx.fillText(
+"SKY MOCHI",
+canvas.width/2,
+180
+);
 
-  drawBird();
+ctx.fillStyle="#4CAF50";
 
-  ctx.font="34px Arial";
+ctx.fillRect(
+canvas.width/2-120,
+350,
+240,
+70
+);
 
-  ctx.fillText(
-    "Tap Anywhere To Play",
-    canvas.width/2,
-    320
-  );
+ctx.fillStyle="#fff";
 
-  // play button
-  ctx.fillStyle="#4CAF50";
+ctx.font="35px Arial";
 
-  ctx.fillRect(
-    canvas.width/2 - 120,
-    380,
-    240,
-    70
-  );
+ctx.fillText(
+"PLAY",
+canvas.width/2,
+398
+);
 
-  ctx.fillStyle="#fff";
+ctx.fillStyle="#FFB703";
 
-  ctx.font="34px Arial";
+ctx.fillRect(
+canvas.width/2-120,
+460,
+240,
+70
+);
 
-  ctx.fillText(
-    "PLAY",
-    canvas.width/2,
-    425
-  );
+ctx.fillStyle="#fff";
 
-  // shop button
-  ctx.fillStyle="#FFB703";
+ctx.fillText(
+"SHOP",
+canvas.width/2,
+508
+);
 
-  ctx.fillRect(
-    canvas.width/2 - 120,
-    480,
-    240,
-    70
-  );
+ctx.textAlign="left";
 
-  ctx.fillStyle="#fff";
-
-  ctx.fillText(
-    "SHOP",
-    canvas.width/2,
-    525
-  );
-
-  ctx.textAlign="left";
 }
 
-/* =========================================================
+/* ======================================================
    SHOP
-========================================================= */
+====================================================== */
 
 function drawShop(){
 
-  drawBackground();
+drawBackground();
 
-  ctx.fillStyle="#fff";
+ctx.fillStyle="#fff";
 
-  ctx.textAlign="center";
+ctx.textAlign="center";
 
-  ctx.font="50px Arial";
+ctx.font="50px Arial";
 
-  ctx.fillText(
-    "MOCHI SHOP",
-    canvas.width/2,
-    90
-  );
+ctx.fillText(
+"SHOP",
+canvas.width/2,
+90
+);
 
-  ctx.font="30px Arial";
+ctx.font="28px Arial";
 
-  ctx.fillText(
-    "Coins: " + coins,
-    canvas.width/2,
-    140
-  );
+ctx.fillText(
+"Coins: "+coins,
+canvas.width/2,
+140
+);
 
-  skins.forEach((s,i)=>{
+skins.forEach((s,i)=>{
 
-    let x = 90 + i*140;
-    let y = 300;
+let x = 90 + i*140;
+let y = 320;
 
-    // card
-    ctx.fillStyle="rgba(255,255,255,0.15)";
+ctx.fillStyle="rgba(255,255,255,0.15)";
 
-    ctx.fillRect(
-      x-50,
-      y-70,
-      100,
-      160
-    );
+ctx.fillRect(
+x-50,
+y-70,
+100,
+160
+);
 
-    // skin preview
-    ctx.fillStyle=s.body;
+ctx.fillStyle=s.body;
 
-    ctx.beginPath();
-    ctx.arc(x,y,25,0,Math.PI*2);
-    ctx.fill();
+ctx.beginPath();
+ctx.arc(x,y,25,0,Math.PI*2);
+ctx.fill();
 
-    // name
-    ctx.fillStyle="#fff";
+ctx.fillStyle="#fff";
+ctx.font="16px Arial";
 
-    ctx.font="16px Arial";
+ctx.fillText(s.name,x,y+50);
 
-    ctx.fillText(
-      s.name,
-      x,
-      y+50
-    );
+if(ownedSkins.includes(i)){
 
-    // price
-    if(ownedSkins.includes(i)){
+if(currentSkin===i){
 
-      if(currentSkin === i){
+ctx.fillStyle="#4CAF50";
+ctx.fillText("USING",x,y+75);
 
-        ctx.fillStyle="#4CAF50";
+}else{
 
-        ctx.fillText(
-          "USING",
-          x,
-          y+75
-        );
+ctx.fillStyle="#FFD166";
+ctx.fillText("USE",x,y+75);
 
-      }else{
-
-        ctx.fillStyle="#FFD166";
-
-        ctx.fillText(
-          "TAP USE",
-          x,
-          y+75
-        );
-      }
-
-    }else{
-
-      ctx.fillStyle="#FF6B6B";
-
-      ctx.fillText(
-        s.price + " COINS",
-        x,
-        y+75
-      );
-    }
-
-  });
-
-  // back button
-
-  ctx.fillStyle="#222";
-
-  ctx.fillRect(20,20,120,50);
-
-  ctx.fillStyle="#fff";
-
-  ctx.font="24px Arial";
-
-  ctx.fillText("BACK",80,53);
-
-  ctx.textAlign="left";
 }
 
-/* =========================================================
+}else{
+
+ctx.fillStyle="#FF6B6B";
+ctx.fillText(
+s.price+" COINS",
+x,
+y+75
+);
+
+}
+
+});
+
+ctx.fillStyle="#222";
+
+ctx.fillRect(20,20,120,50);
+
+ctx.fillStyle="#fff";
+
+ctx.font="24px Arial";
+
+ctx.fillText("BACK",80,53);
+
+ctx.textAlign="left";
+
+}
+
+/* ======================================================
    RESET
-========================================================= */
+====================================================== */
 
 function reset(){
 
-  pipes = [];
-  coinsArr = [];
+pipes = [];
+coinsArr = [];
 
-  score = 0;
-  frame = 0;
+score = 0;
+frame = 0;
 
-  speed = 2.6;
-  spawnRate = 110;
-  gap = 230;
+speed = 2.5;
+gap = 230;
+spawnRate = 115;
 
-  bird.y = canvas.height/2;
-  bird.vel = 0;
+bird.y = canvas.height/2;
+bird.vel = 0;
 
-  state = STATE.PLAY;
+state = STATE.PLAY;
+
 }
 
-/* =========================================================
+/* ======================================================
    LOOP
-========================================================= */
+====================================================== */
 
 function loop(){
 
-  drawBackground();
+drawBackground();
 
-  if(state === STATE.MENU){
+if(state === STATE.MENU){
 
-    drawMenu();
-  }
+drawMenu();
 
-  else if(state === STATE.SHOP){
+}
 
-    drawShop();
-  }
+else if(state === STATE.SHOP){
 
-  else if(state === STATE.PLAY){
+drawShop();
 
-    updateBird();
+}
 
-    updatePipes();
+else if(state === STATE.PLAY){
 
-    updateCoins();
+updateBird();
+updatePipes();
+updateCoins();
 
-    // spawn
-    if(frame % spawnRate === 0){
+if(frame % spawnRate === 0){
 
-      createPipe();
+createPipe();
 
-      if(Math.random() < 0.9){
-        spawnCoin();
-      }
-    }
+if(Math.random() < 0.9){
 
-    // slowly harder
-    if(score > 20){
+spawnCoin();
 
-      speed = 3.2;
-      gap = 210;
-    }
+}
 
-    if(score > 40){
+}
 
-      speed = 3.8;
-      gap = 190;
-    }
+if(score > 20){
 
-    drawPipes();
+speed = 3.1;
+gap = 210;
 
-    drawCoins();
+}
 
-    drawBird();
+if(score > 40){
 
-    drawUI();
+speed = 3.8;
+gap = 190;
 
-    frame++;
-  }
+}
 
-  else if(state === STATE.OVER){
+drawPipes();
+drawCoins();
+drawBird();
+drawUI();
 
-    if(score > highScore){
+frame++;
 
-      highScore = score;
+}
 
-      localStorage.setItem(
-        "sky_high",
-        highScore
-      );
-    }
+else if(state === STATE.OVER){
 
-    drawPipes();
+if(score > highScore){
 
-    drawCoins();
+highScore = score;
+saveData("sky_high",highScore);
 
-    drawBird();
+}
 
-    ctx.fillStyle="rgba(0,0,0,0.55)";
+drawPipes();
+drawCoins();
+drawBird();
 
-    ctx.fillRect(
-      0,0,
-      canvas.width,
-      canvas.height
-    );
+ctx.fillStyle="rgba(0,0,0,0.5)";
+ctx.fillRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
 
-    ctx.fillStyle="#fff";
+ctx.fillStyle="#fff";
 
-    ctx.textAlign="center";
+ctx.textAlign="center";
 
-    ctx.font="60px Arial";
+ctx.font="60px Arial";
 
-    ctx.fillText(
-      "GAME OVER",
-      canvas.width/2,
-      canvas.height/2 - 70
-    );
+ctx.fillText(
+"GAME OVER",
+canvas.width/2,
+canvas.height/2-60
+);
 
-    ctx.font="38px Arial";
+ctx.font="35px Arial";
 
-    ctx.fillText(
-      "Score: " + score,
-      canvas.width/2,
-      canvas.height/2
-    );
+ctx.fillText(
+"Score: "+score,
+canvas.width/2,
+canvas.height/2
+);
 
-    ctx.fillText(
-      "Tap To Restart",
-      canvas.width/2,
-      canvas.height/2 + 70
-    );
+ctx.fillText(
+"Tap To Restart",
+canvas.width/2,
+canvas.height/2+60
+);
 
-    ctx.textAlign="left";
-  }
+ctx.textAlign="left";
 
-  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+
 }
 
 loop();
 
-/* =========================================================
+/* ======================================================
    INPUT
-========================================================= */
+====================================================== */
 
 function tap(e){
 
-  const mx = e.clientX ||
-  (e.touches ? e.touches[0].clientX : 0);
+e.preventDefault();
 
-  const my = e.clientY ||
-  (e.touches ? e.touches[0].clientY : 0);
+const rect = canvas.getBoundingClientRect();
 
-  /* MENU */
+const x =
+(e.touches ?
+e.touches[0].clientX :
+e.clientX) - rect.left;
 
-  if(state === STATE.MENU){
+const y =
+(e.touches ?
+e.touches[0].clientY :
+e.clientY) - rect.top;
 
-    // PLAY BUTTON
-    if(
-      mx > canvas.width/2 - 120 &&
-      mx < canvas.width/2 + 120 &&
-      my > 380 &&
-      my < 450
-    ){
-      reset();
-      return;
-    }
+/* MENU */
 
-    // SHOP BUTTON
-    if(
-      mx > canvas.width/2 - 120 &&
-      mx < canvas.width/2 + 120 &&
-      my > 480 &&
-      my < 550
-    ){
-      state = STATE.SHOP;
-      return;
-    }
-  }
+if(state === STATE.MENU){
 
-  /* SHOP */
+if(
+x > canvas.width/2-120 &&
+x < canvas.width/2+120 &&
+y > 350 &&
+y < 420
+){
 
-  if(state === STATE.SHOP){
-
-    // BACK
-    if(
-      mx > 20 &&
-      mx < 140 &&
-      my > 20 &&
-      my < 70
-    ){
-      state = STATE.MENU;
-      return;
-    }
-
-    // skins
-    skins.forEach((s,i)=>{
-
-      let x = 90 + i*140;
-      let y = 300;
-
-      if(
-        mx > x-50 &&
-        mx < x+50 &&
-        my > y-70 &&
-        my < y+90
-      ){
-
-        // owned
-        if(ownedSkins.includes(i)){
-
-          currentSkin = i;
-
-          localStorage.setItem(
-            "sky_currentSkin",
-            currentSkin
-          );
-        }
-
-        // buy
-        else if(coins >= s.price){
-
-          coins -= s.price;
-
-          ownedSkins.push(i);
-
-          currentSkin = i;
-
-          localStorage.setItem(
-            "sky_coins",
-            coins
-          );
-
-          localStorage.setItem(
-            "sky_skins",
-            JSON.stringify(ownedSkins)
-          );
-
-          localStorage.setItem(
-            "sky_currentSkin",
-            currentSkin
-          );
-        }
-      }
-
-    });
-
-    return;
-  }
-
-  /* OVER */
-
-  if(state === STATE.OVER){
-
-    reset();
-    return;
-  }
-
-  /* PLAY */
-
-  if(state === STATE.PLAY){
-
-    bird.vel = bird.lift;
-  }
+reset();
+return;
 
 }
 
-document.addEventListener("mousedown", tap);
-document.addEventListener("touchstart", tap);
+if(
+x > canvas.width/2-120 &&
+x < canvas.width/2+120 &&
+y > 460 &&
+y < 530
+){
+
+state = STATE.SHOP;
+return;
+
+}
+
+}
+
+/* SHOP */
+
+if(state === STATE.SHOP){
+
+if(
+x > 20 &&
+x < 140 &&
+y > 20 &&
+y < 70
+){
+
+state = STATE.MENU;
+return;
+
+}
+
+skins.forEach((s,i)=>{
+
+let sx = 90 + i*140;
+let sy = 320;
+
+if(
+
+x > sx-50 &&
+x < sx+50 &&
+y > sy-70 &&
+y < sy+90
+
+){
+
+if(ownedSkins.includes(i)){
+
+currentSkin = i;
+
+saveData("sky_skin",currentSkin);
+
+}else if(coins >= s.price){
+
+coins -= s.price;
+
+ownedSkins.push(i);
+
+currentSkin = i;
+
+saveData("sky_coins",coins);
+saveData("sky_skins",ownedSkins);
+saveData("sky_skin",currentSkin);
+
+}
+
+}
+
+});
+
+return;
+
+}
+
+/* OVER */
+
+if(state === STATE.OVER){
+
+reset();
+return;
+
+}
+
+/* PLAY */
+
+if(state === STATE.PLAY){
+
+bird.vel = bird.lift;
+
+}
+
+}
+
+canvas.addEventListener(
+"touchstart",
+tap,
+{passive:false}
+);
+
+canvas.addEventListener(
+"mousedown",
+tap
+);
 
 </script>
 
