@@ -6,6 +6,8 @@
 
 <title>Dino Mochi</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" rel="stylesheet">
+
 <style>
 
 *{
@@ -19,7 +21,7 @@ body{
 overflow:hidden;
 background:#000;
 touch-action:none;
-font-family:Arial,sans-serif;
+font-family:'Cinzel',serif;
 }
 
 canvas{
@@ -505,7 +507,13 @@ passed:false
 
 pipes.push(pipe);
 
+/* rare coins */
+
+if(Math.random() < 0.35){
+
 spawnCoin(pipe);
+
+}
 
 }
 
@@ -521,8 +529,6 @@ p.passed = true;
 score++;
 
 }
-
-/* collision */
 
 let collideX =
 
@@ -623,7 +629,7 @@ function drawUI(){
 
 ctx.fillStyle="#FFF";
 
-ctx.font="22px Arial";
+ctx.font="20px Cinzel";
 
 ctx.fillText(
 "Score: "+score,
@@ -634,13 +640,13 @@ ctx.fillText(
 ctx.fillText(
 "Coins: "+coins,
 20,
-75
+70
 );
 
 ctx.fillText(
 "High: "+highScore,
 20,
-110
+100
 );
 
 }
@@ -657,7 +663,7 @@ ctx.textAlign="center";
 
 ctx.fillStyle="#FFF";
 
-ctx.font="clamp(42px,8vw,60px) Arial";
+ctx.font="bold clamp(42px,8vw,60px) Cinzel";
 
 ctx.fillText(
 "DINO MOCHI",
@@ -665,7 +671,7 @@ canvas.width/2,
 180
 );
 
-ctx.font="24px Arial";
+ctx.font="22px Cinzel";
 
 ctx.fillText(
 "Roar and Fly!",
@@ -686,7 +692,7 @@ canvas.width/2-130,
 
 ctx.fillStyle="#FFF";
 
-ctx.font="35px Arial";
+ctx.font="32px Cinzel";
 
 ctx.fillText(
 "PLAY",
@@ -729,46 +735,66 @@ ctx.fillStyle="#FFF";
 
 ctx.textAlign="center";
 
-ctx.font="42px Arial";
+ctx.font="36px Cinzel";
 
 ctx.fillText(
 "DINO SHOP",
 canvas.width/2,
-80
+70
 );
 
-ctx.font="24px Arial";
+ctx.font="20px Cinzel";
 
 ctx.fillText(
 "Coins: "+coins,
 canvas.width/2,
-120
+105
 );
+
+let cols = 2;
+let cardW = 130;
+let cardH = 170;
+
+let spacingX =
+(canvas.width - cols*cardW) / 3;
 
 skins.forEach((s,i)=>{
 
-let spacing = canvas.width / skins.length;
-let x = spacing * i + spacing/2;
-let y = canvas.height/2;
+let row = Math.floor(i/2);
+let col = i%2;
 
-ctx.fillStyle="rgba(255,255,255,0.15)";
+let x =
+spacingX +
+col*(cardW + spacingX);
+
+let y =
+160 + row*210;
+
+ctx.fillStyle="rgba(0,0,0,0.35)";
 
 ctx.fillRect(
-x-55,
-y-70,
-110,
-170
+x,
+y,
+cardW,
+cardH
 );
 
-/* dino icon */
+/* dino */
 
 ctx.fillStyle=s.body;
 
 ctx.beginPath();
-ctx.arc(x,y,26,0,Math.PI*2);
+ctx.arc(
+x + cardW/2,
+y + 55,
+26,
+0,
+Math.PI*2
+);
+
 ctx.fill();
 
-/* wings preview */
+/* wings */
 
 if(s.wings){
 
@@ -779,17 +805,17 @@ ctx.fillStyle="#FFF";
 
 ctx.beginPath();
 
-ctx.moveTo(x-5,y);
-ctx.lineTo(x-28,y-18-flap);
-ctx.lineTo(x-20,y+8);
+ctx.moveTo(x+55,y+55);
+ctx.lineTo(x+25,y+35-flap);
+ctx.lineTo(x+35,y+65);
 
 ctx.fill();
 
 ctx.beginPath();
 
-ctx.moveTo(x+5,y);
-ctx.lineTo(x+28,y-18+flap);
-ctx.lineTo(x+20,y+8);
+ctx.moveTo(x+75,y+55);
+ctx.lineTo(x+105,y+35+flap);
+ctx.lineTo(x+95,y+65);
 
 ctx.fill();
 
@@ -797,16 +823,21 @@ ctx.fill();
 
 ctx.fillStyle=s.spike;
 
-ctx.fillRect(x-12,y-38,24,10);
+ctx.fillRect(
+x + cardW/2 - 12,
+y + 18,
+24,
+10
+);
 
 ctx.fillStyle="#FFF";
 
-ctx.font="15px Arial";
+ctx.font="15px Cinzel";
 
 ctx.fillText(
 s.name,
-x,
-y+55
+x + cardW/2,
+y + 105
 );
 
 if(ownedSkins.includes(i)){
@@ -814,12 +845,40 @@ if(ownedSkins.includes(i)){
 if(currentSkin===i){
 
 ctx.fillStyle="#38B000";
-ctx.fillText("USING",x,y+82);
+
+ctx.fillRect(
+x+15,
+y+120,
+100,
+32
+);
+
+ctx.fillStyle="#FFF";
+
+ctx.fillText(
+"USING",
+x+65,
+y+142
+);
 
 }else{
 
 ctx.fillStyle="#FFD60A";
-ctx.fillText("USE",x,y+82);
+
+ctx.fillRect(
+x+15,
+y+120,
+100,
+32
+);
+
+ctx.fillStyle="#000";
+
+ctx.fillText(
+"USE",
+x+65,
+y+142
+);
 
 }
 
@@ -827,10 +886,19 @@ ctx.fillText("USE",x,y+82);
 
 ctx.fillStyle="#FF595E";
 
+ctx.fillRect(
+x+15,
+y+120,
+100,
+32
+);
+
+ctx.fillStyle="#FFF";
+
 ctx.fillText(
 s.price+" COINS",
-x,
-y+82
+x+65,
+y+142
 );
 
 }
@@ -839,15 +907,19 @@ y+82
 
 /* back */
 
-ctx.fillStyle="#222";
+ctx.fillStyle="#111";
 
-ctx.fillRect(20,20,120,50);
+ctx.fillRect(15,15,100,42);
 
 ctx.fillStyle="#FFF";
 
-ctx.font="24px Arial";
+ctx.font="20px Cinzel";
 
-ctx.fillText("BACK",80,53);
+ctx.fillText(
+"BACK",
+65,
+43
+);
 
 ctx.textAlign="left";
 
@@ -951,7 +1023,7 @@ ctx.fillStyle="#FFF";
 
 ctx.textAlign="center";
 
-ctx.font="48px Arial";
+ctx.font="bold 48px Cinzel";
 
 ctx.fillText(
 "GAME OVER",
@@ -959,7 +1031,7 @@ canvas.width/2,
 canvas.height/2-90
 );
 
-ctx.font="30px Arial";
+ctx.font="28px Cinzel";
 
 ctx.fillText(
 "Score: "+score,
@@ -986,7 +1058,7 @@ canvas.width/2,
 canvas.height/2+62
 );
 
-/* shop button */
+/* shop */
 
 ctx.fillStyle="#FFB703";
 
@@ -1082,10 +1154,10 @@ if(state===STATE.SHOP){
 
 if(
 
-x > 20 &&
-x < 140 &&
-y > 20 &&
-y < 70
+x > 15 &&
+x < 115 &&
+y > 15 &&
+y < 57
 
 ){
 
@@ -1096,16 +1168,29 @@ return;
 
 skins.forEach((s,i)=>{
 
-let spacing = canvas.width / skins.length;
-let sx = spacing * i + spacing/2;
-let sy = canvas.height/2;
+let cols = 2;
+let cardW = 130;
+let cardH = 170;
+
+let spacingX =
+(canvas.width - cols*cardW) / 3;
+
+let row = Math.floor(i/2);
+let col = i%2;
+
+let sx =
+spacingX +
+col*(cardW + spacingX);
+
+let sy =
+160 + row*210;
 
 if(
 
-x > sx-55 &&
-x < sx+55 &&
-y > sy-70 &&
-y < sy+100
+x > sx &&
+x < sx + cardW &&
+y > sy &&
+y < sy + cardH
 
 ){
 
