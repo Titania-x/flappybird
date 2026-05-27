@@ -99,44 +99,61 @@ const gain = audioCtx.createGain();
 osc.connect(gain);
 gain.connect(audioCtx.destination);
 
+osc.type = "sawtooth";
+
 if(type==="jump"){
 
-osc.frequency.value = 220;
+osc.frequency.setValueAtTime(
+220,
+audioCtx.currentTime
+);
 
 }
 
 if(type==="coin"){
 
-osc.frequency.value = 880;
+osc.frequency.setValueAtTime(
+880,
+audioCtx.currentTime
+);
 
 }
 
 if(type==="dead"){
 
-osc.frequency.value = 90;
+osc.frequency.setValueAtTime(
+90,
+audioCtx.currentTime
+);
 
 }
 
 if(type==="roar"){
 
-osc.frequency.value = 140;
+osc.frequency.setValueAtTime(
+180,
+audioCtx.currentTime
+);
+
+osc.frequency.exponentialRampToValueAtTime(
+70,
+audioCtx.currentTime + 0.35
+);
 
 }
 
-osc.type = "sawtooth";
-
 gain.gain.setValueAtTime(
-0.15,
+0.2,
 audioCtx.currentTime
 );
 
 gain.gain.exponentialRampToValueAtTime(
 0.0001,
-audioCtx.currentTime + 0.3
+audioCtx.currentTime + 0.4
 );
 
 osc.start();
-osc.stop(audioCtx.currentTime + 0.3);
+osc.stop(audioCtx.currentTime + 0.4);
 
 }
 
@@ -203,7 +220,8 @@ name:"Rex",
 body:"#6BCB77",
 belly:"#C7F9CC",
 spike:"#2D6A4F",
-price:0
+price:0,
+wings:false
 },
 
 {
@@ -211,7 +229,8 @@ name:"Raptor",
 body:"#4D96FF",
 belly:"#D7E3FC",
 spike:"#1E3A8A",
-price:10
+price:50,
+wings:false
 },
 
 {
@@ -219,7 +238,8 @@ name:"Spino",
 body:"#FF6B6B",
 belly:"#FFD6A5",
 spike:"#C1121F",
-price:20
+price:100,
+wings:false
 },
 
 {
@@ -227,7 +247,17 @@ name:"Dragon",
 body:"#9D4EDD",
 belly:"#E0AAFF",
 spike:"#5A189A",
-price:30
+price:300,
+wings:false
+},
+
+{
+name:"Winged King",
+body:"#FFD60A",
+belly:"#FFF3BF",
+spike:"#FF5400",
+price:500,
+wings:true
 }
 
 ];
@@ -300,6 +330,37 @@ ctx.translate(dino.x,dino.y);
 
 ctx.rotate(dino.vel * 0.03);
 
+/* animated wings */
+
+if(s.wings){
+
+let flap =
+Math.sin(frame * 0.3) * 12;
+
+ctx.fillStyle="rgba(255,255,255,0.85)";
+
+/* left wing */
+
+ctx.beginPath();
+
+ctx.moveTo(-10,-5);
+ctx.lineTo(-42,-22-flap);
+ctx.lineTo(-30,10);
+
+ctx.fill();
+
+/* right wing */
+
+ctx.beginPath();
+
+ctx.moveTo(10,-5);
+ctx.lineTo(42,-22+flap);
+ctx.lineTo(30,10);
+
+ctx.fill();
+
+}
+
 /* body */
 
 ctx.fillStyle=s.body;
@@ -361,8 +422,6 @@ ctx.restore();
 ====================================================== */
 
 function spawnCoin(pipe){
-
-/* ALWAYS INSIDE SAFE GAP */
 
 let safeY =
 pipe.top + (gap/2);
@@ -446,8 +505,6 @@ passed:false
 
 pipes.push(pipe);
 
-/* SPAWN COIN SAFELY */
-
 spawnCoin(pipe);
 
 }
@@ -497,8 +554,6 @@ function drawPipes(){
 
 pipes.forEach(p=>{
 
-/* cactus tubes */
-
 ctx.fillStyle="#2D6A4F";
 
 ctx.fillRect(
@@ -514,8 +569,6 @@ p.top+gap,
 90,
 canvas.height
 );
-
-/* cactus lines */
 
 ctx.strokeStyle="#95D5B2";
 ctx.lineWidth=4;
@@ -570,7 +623,7 @@ function drawUI(){
 
 ctx.fillStyle="#FFF";
 
-ctx.font="26px Arial";
+ctx.font="22px Arial";
 
 ctx.fillText(
 "Score: "+score,
@@ -581,13 +634,13 @@ ctx.fillText(
 ctx.fillText(
 "Coins: "+coins,
 20,
-80
+75
 );
 
 ctx.fillText(
 "High: "+highScore,
 20,
-120
+110
 );
 
 }
@@ -604,7 +657,7 @@ ctx.textAlign="center";
 
 ctx.fillStyle="#FFF";
 
-ctx.font="60px Arial";
+ctx.font="clamp(42px,8vw,60px) Arial";
 
 ctx.fillText(
 "DINO MOCHI",
@@ -612,7 +665,7 @@ canvas.width/2,
 180
 );
 
-ctx.font="28px Arial";
+ctx.font="24px Arial";
 
 ctx.fillText(
 "Roar and Fly!",
@@ -676,7 +729,7 @@ ctx.fillStyle="#FFF";
 
 ctx.textAlign="center";
 
-ctx.font="48px Arial";
+ctx.font="42px Arial";
 
 ctx.fillText(
 "DINO SHOP",
@@ -694,7 +747,8 @@ canvas.width/2,
 
 skins.forEach((s,i)=>{
 
-let x = 100 + i*150;
+let spacing = canvas.width / skins.length;
+let x = spacing * i + spacing/2;
 let y = canvas.height/2;
 
 ctx.fillStyle="rgba(255,255,255,0.15)";
@@ -714,13 +768,40 @@ ctx.beginPath();
 ctx.arc(x,y,26,0,Math.PI*2);
 ctx.fill();
 
+/* wings preview */
+
+if(s.wings){
+
+let flap =
+Math.sin(frame * 0.3) * 8;
+
+ctx.fillStyle="#FFF";
+
+ctx.beginPath();
+
+ctx.moveTo(x-5,y);
+ctx.lineTo(x-28,y-18-flap);
+ctx.lineTo(x-20,y+8);
+
+ctx.fill();
+
+ctx.beginPath();
+
+ctx.moveTo(x+5,y);
+ctx.lineTo(x+28,y-18+flap);
+ctx.lineTo(x+20,y+8);
+
+ctx.fill();
+
+}
+
 ctx.fillStyle=s.spike;
 
 ctx.fillRect(x-12,y-38,24,10);
 
 ctx.fillStyle="#FFF";
 
-ctx.font="18px Arial";
+ctx.font="15px Arial";
 
 ctx.fillText(
 s.name,
@@ -791,6 +872,10 @@ state = STATE.PLAY;
 
 sound("roar");
 
+setTimeout(()=>{
+sound("roar");
+},220);
+
 }
 
 /* ======================================================
@@ -814,6 +899,8 @@ drawShop();
 }
 
 else if(state===STATE.PLAY){
+
+speed = 3 + score * 0.08;
 
 updateDino();
 updatePipes();
@@ -864,7 +951,7 @@ ctx.fillStyle="#FFF";
 
 ctx.textAlign="center";
 
-ctx.font="52px Arial";
+ctx.font="48px Arial";
 
 ctx.fillText(
 "GAME OVER",
@@ -872,7 +959,7 @@ canvas.width/2,
 canvas.height/2-90
 );
 
-ctx.font="32px Arial";
+ctx.font="30px Arial";
 
 ctx.fillText(
 "Score: "+score,
@@ -1009,7 +1096,8 @@ return;
 
 skins.forEach((s,i)=>{
 
-let sx = 100 + i*150;
+let spacing = canvas.width / skins.length;
+let sx = spacing * i + spacing/2;
 let sy = canvas.height/2;
 
 if(
@@ -1029,6 +1117,8 @@ saveData(
 "dino_skin",
 currentSkin
 );
+
+sound("roar");
 
 }else if(coins >= s.price){
 
@@ -1053,6 +1143,8 @@ saveData(
 currentSkin
 );
 
+sound("roar");
+
 }
 
 }
@@ -1067,8 +1159,6 @@ return;
 
 if(state===STATE.OVER){
 
-/* restart */
-
 if(
 
 x > canvas.width/2-130 &&
@@ -1082,8 +1172,6 @@ reset();
 return;
 
 }
-
-/* shop */
 
 if(
 
